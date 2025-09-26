@@ -1,0 +1,127 @@
+/* تنسيق عام */
+body {
+  margin: 0;
+  font-family: 'Tahoma', sans-serif;
+  line-height: 1.6;
+  background: #f9f9f9;
+  color: #333;
+}
+
+/* الهيدر */
+header {
+  background: #0077b6;
+  color: white;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+header h1 {
+  margin: 0;
+}
+
+nav ul {
+  list-style: none;
+  display: flex;
+  margin: 0;
+  padding: 0;
+}
+
+nav li {
+  margin: 0 10px;
+}
+
+nav a {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
+/* القسم الرئيسي */
+.hero {
+  text-align: center;
+  padding: 50px 20px;
+  background: linear-gradient(135deg, #0077b6, #00b4d8);
+  color: white;
+}
+
+.hero .btn {
+  display: inline-block;
+  background: #ffb703;
+  color: black;
+  padding: 10px 20px;
+  margin-top: 15px;
+  border-radius: 5px;
+  text-decoration: none;
+}
+
+.hero .btn:hover {
+  background: #fb8500;
+}
+
+/* الأقسام */
+.section {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.section h2 {
+  margin-bottom: 20px;
+}
+
+/* الشبكة */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+}
+
+.card:hover {
+  transform: scale(1.05);
+}
+
+/* الفورم */
+form {
+  display: flex;
+  flex-direction: column;
+  max-width: 400px;
+  margin: auto;
+}
+
+form input, form textarea, form button {
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+form button {
+  background: #0077b6;
+  color: white;
+  cursor: pointer;
+}
+
+form button:hover {
+  background: #023e8a;
+}
+
+/* الفوتر */
+footer {
+  background: #333;
+  color: white;
+  text-align: center;
+  padding: 15px;
+}

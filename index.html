@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>LearnSync — Prototype</title>
+  <style>
+    :root{
+      --blue:#2563eb;
+      --muted:#6b7280;
+      --bg:#f5f7fb;
+      --card:#ffffff;
+      --danger:#dc2626;
+      --success:#16a34a;
+      --glass: rgba(255,255,255,0.6);
+      font-family: 'Cairo', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    html,body{height:100%;margin:0;background:var(--bg);color:#0f172a}
+    .container{max-width:1100px;margin:28px auto;padding:20px}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    h1{margin:0;font-size:22px}
+    .controls{display:flex;gap:8px;align-items:center}
+    .btn{background:var(--blue);color:#fff;padding:10px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:600}
+    .btn.ghost{background:transparent;color:var(--blue);border:1px solid rgba(37,99,235,0.12)}
+    .panel{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(12,23,36,0.06)}
+    .layout{display:grid;grid-template-columns:260px 1fr;gap:16px}
+    .sidebar{display:flex;flex-direction:column;gap:10px}
+    .section-list{display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow:auto;padding:6px}
+    .sec-item{padding:8px;border-radius:9px;cursor:pointer;border:1px solid transparent}
+    .sec-item.active{background:linear-gradient(90deg, rgba(79,156,249,0.12), rgba(79,156,249,0.04));border-color:rgba(79,156,249,0.18)}
+    .add-section{display:flex;gap:8px}
+    input, select, textarea{font-family:inherit;padding:10px;border-radius:8px;border:1px solid rgba(15,23,42,0.06);outline:none}
+    input:focus, select:focus, textarea:focus{box-shadow:0 6px 18px rgba(37,99,235,0.08)}
+    .main-area{display:flex;flex-direction:column;gap:12px}
+    .section-card{padding:12px;border-radius:12px;display:flex;flex-direction:column;gap:10px}
+    .resources{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+    .resource{display:flex;gap:10px;background:linear-gradient(180deg, #fff, #fbfdff);padding:10px;border-radius:10px;border:1px solid rgba(2,6,23,0.04)}
+    .thumb{width:160px;height:90px;border-radius:8px;object-fit:cover;background:#eee}
+    .r-info{flex:1;display:flex;flex-direction:column;gap:6px}
+    .r-title{font-weight:700}
+    .r-meta{font-size:13px;color:var(--muted)}
+    .warning{color:var(--danger);font-weight:600}
+    .success{color:var(--success);font-weight:600}
+    .small{font-size:13px;color:var(--muted)}
+    .row{display:flex;gap:8px;align-items:center}
+    .muted{color:var(--muted)}
+    .search-box{display:flex;gap:8px;align-items:center;padding:8px;border-radius:10px;background:rgba(2,6,23,0.03)}
+    .drag-handle{cursor:grab;padding:6px;border-radius:6px;border:1px dashed rgba(15,23,42,0.04);font-size:12px;color:var(--muted)}
+    .footer{margin-top:12px;display:flex;justify-content:space-between;align-items:center}
+    .badge{background:#eef2ff;color:var(--blue);padding:6px 8px;border-radius:999px;font-weight:600;font-size:13px}
+    .json-area{width:100%;min-height:120px}
+    @media (max-width:900px){ .layout{grid-template-columns:1fr} .thumb{width:120px;height:72px} .resources{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>LearnSync — ليرن سينك</h1>
+        <div class="small muted">نسخة تجريبية — واجهة HTML/JavaScript (محليًا)</div>
+      </div>
+
+      <div class="controls">
+        <div class="search-box panel">
+          <input id="searchInput" placeholder="ابحث عن مورد أو جزء..." style="border:none;background:transparent" />
+          <button class="btn ghost" id="btnAIOrder">ترتيب بالـ AI</button>
+        </div>
+        <button class="btn" id="btnExport">تصدير JSON</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <!-- Sidebar -->
+      <aside class="sidebar panel">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong>الأجزاء (Sections)</strong>
+          <span class="badge" id="totalSections">0</span>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <div style="flex:1">
+            <input id="newSectionName" placeholder="اسم الجزء..." />
+          </div>
+          <button class="btn" id="addSectionBtn">إضافة</button>
+        </div>
+
+        <div class="section-list" id="sectionList"></div>
+
+        <div style="margin-top:auto;font-size:13px;color:var(--muted);padding-top:10px">
+          <div>حفظ تلقائي في الجهاز (localStorage)</div>
+        </div>
+      </aside>
+
+      <!-- Main -->
+      <main class="main-area">
+        <!-- Add resource panel -->
+        <div class="panel add-resource">
+          <strong>إضافة مورد جديد</strong>
+          <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+            <input id="resourceUrl" placeholder="ضع رابط الفيديو أو الكورس أو ملف (YouTube, Udemy, PDF...)" style="flex:1" />
+            <select id="chooseSection" style="width:220px"></select>
+            <select id="selectLevel" style="width:150px">
+              <option value="">تعيين المستوى (اختياري)</option>
+              <option>مبتدئ</option>
+              <option>متوسط</option>
+              <option>متقدم</option>
+            </select>
+            <button class="btn" id="addResourceBtn">حفظ</button>
+          </div>
+          <div class="small muted" style="margin-top:8px">بعد الضغط 'حفظ' سيقوم النظام بفحص الصلة بالمطلب المحدد ويعرض تحذير أحمر في حال كانت النتيجة منخفضة — يمكنك تجاهله وحفظ المورد إذا أردت.</div>
+        </div>
+
+        <!-- Section detail -->
+        <div id="sectionArea" class="panel section-card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <h2 id="sectionTitle">اختر جزءًا لعرض موارده</h2>
+              <div class="small muted" id="sectionCount"></div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button class="btn ghost" id="btnShare">مشاركة / نسخ JSON</button>
+              <button class="btn ghost" id="btnImport">استيراد JSON</button>
+            </div>
+          </div>
+
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+            <div class="small muted">عرض الموارد — سحب وإفلات لإعادة الترتيب</div>
+          </div>
+
+          <div style="margin-top:12px" id="resourcesArea">
+            <!-- resources grid -->
+            <div class="resources" id="resourcesGrid"></div>
+          </div>
+
+          <div class="footer">
+            <div class="small muted">يمكنك تعديل عنوان المورد عبر النقر على اسمه</div>
+            <div>
+              <span class="small muted">الإجمالي: </span><strong id="totalResources">0</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- JSON modal (simple) -->
+        <div id="jsonModal" class="panel" style="display:none;flex-direction:column;gap:8px">
+          <strong>استيراد / تصدير JSON</strong>
+          <textarea id="jsonArea" class="json-area" placeholder='أدخل JSON هنا للاستيراد أو اضغط زر التصدير'></textarea>
+          <div style="display:flex;gap:8px">
+            <button class="btn" id="doImport">استيراد</button>
+            <button class="btn ghost" id="doCloseJson">إغلاق</button>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+<script>
+/*
+  LearnSync Prototype (client-side)
+  - Sections and Resources persisted in localStorage under key "learnsync_data"
+  - Simulated AI suitability check: compare overlap between section name words and title/description words
+  - YouTube thumbnail detected automatically via vid id
+  - Allows:
+    - add/remove sections
+    - add resource to section (with suitability check)
+    - drag & drop reorder within section
+    - search global
+    - export/import JSON
+*/
+
+const STORAGE_KEY = 'learnsync_data_v1';
+
+/* Utility functions */
+function loadData(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return { sections: [] };
+    return JSON.parse(raw);
+  } catch(e){
+    console.error(e);
+    return { sections: [] };
+  }
+}
+function saveData(data){ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+
+function uid(prefix='id'){ return prefix + '_' + Math.random().toString(36).slice(2,9); }
+
+function extractYouTubeThumbnail(url){
+  // supports youtube.com/watch?v=ID and youtu.be/ID
+  try{
+    let id = null;
+    if(url.includes('youtu.be/')){
+      id = url.split('youtu.be/')[1].split(/[?&]/)[0];
+    } else if(url.includes('youtube.com')){
+      const m = url.match(/[?&]v=([^&]+)/);
+      if(m) id = m[1];
+    }
+    if(id) return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+  }catch(e){}
+  return null;
+}
+
+function guessTitleFromUrl(url){
+  // crude: take last path segment
+  try{
+    const p = new URL(url).pathname.split('/').filter(Boolean).pop() || url;
+    return decodeURIComponent(p.replace(/[-_]/g,' ')).slice(0,60);
+  }catch(e){
+    return url.slice(0,60);
+  }
+}
+
+function tokenizeArabic(text){
+  // very simple tokenizer: split on non-letters/numbers, remove short words
+  return (text||'').toLowerCase().split(/[^ء-يa-z0-9]+/).filter(w=>w && w.length>2);
+}
+
+function similarityScore(sectionName, title, description=''){
+  // simple overlap based similarity (0..1)
+  const s = tokenizeArabic(sectionName);
+  const t = tokenizeArabic(title + ' ' + description);
+  if(s.length===0 || t.length===0) return 0;
+  let matches=0;
+  s.forEach(w=>{
+    if(t.includes(w)) matches++;
+  });
+  return matches / Math.max(s.length, 1);
+}
+
+/* App state */
+let state = loadData(); // { sections: [ { id,name, resources:[{id,url,title,thumbnail,level,suitable}] } ] }
+let activeSectionId = state.sections[0]?.id || null;
+
+/* DOM refs */
+const sectionListEl = document.getElementById('sectionList');
+const totalSectionsEl = document.getElementById('totalSections');
+const newSectionInput = document.getElementById('newSectionName');
+const addSectionBtn = document.getElementById('addSectionBtn');
+const chooseSectionSelect = document.getElementById('chooseSection');
+const selectLevel = document.getElementById('selectLevel');
+const resourceUrlInput = document.getElementById('resourceUrl');
+const addResourceBtn = document.getElementById('addResourceBtn');
+const sectionTitleEl = document.getElementById('sectionTitle');
+const sectionCountEl = document.getElementById('sectionCount');
+const resourcesGrid = document.getElementById('resourcesGrid');
+const totalResourcesEl = document.getElementById('totalResources');
+const btnAIOrder = document.getElementById('btnAIOrder');
+const searchInput = document.getElementById('searchInput');
+const btnExport = document.getElementById('btnExport');
+const btnShare = document.getElementById('btnShare');
+const btnImport = document.getElementById('btnImport');
+const jsonModal = document.getElementById('jsonModal');
+const jsonArea = document.getElementById('jsonArea');
+const doImport = document.getElementById('doImport');
+const doCloseJson = document.getElementById('doCloseJson');
+
+function renderSections(){
+  sectionListEl.innerHTML='';
+  state.sections.forEach(sec=>{
+    const el = document.createElement('div');
+    el.className = 'sec-item' + (sec.id===activeSectionId ? ' active':'');
+
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="display:flex;flex-direction:column">
+          <div style="font-weight:700">${escapeHtml(sec.name)}</div>
+          <div class="small muted">${sec.resources.length} مورد</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">
+          <button title="فتح" class="btn ghost open-sec" data-id="${sec.id}">فتح</button>
+          <button title="حذف" class="btn" style="background:#ef4444;padding:6px 8px" data-del="${sec.id}">حذف</button>
+        </div>
+      </div>
+    `;
+    sectionListEl.appendChild(el);
+  });
+  totalSectionsEl.textContent = state.sections.length;
+  // update choose select
+  chooseSectionSelect.innerHTML = '';
+  state.sections.forEach(s=>{
+    const o = document.createElement('option'); o.value=s.id; o.textContent=s.name; chooseSectionSelect.appendChild(o);
+  });
+  // keep selection
+  if(activeSectionId){
+    chooseSectionSelect.value = activeSectionId;
+  }
+}
+
+function escapeHtml(s){ return (s+'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+function renderActiveSection(){
+  const sec = state.sections.find(s=>s.id===activeSectionId);
+  if(!sec){
+    sectionTitleEl.textContent = 'اختر جزءًا لعرض موارده';
+    document.getElementById('resourcesGrid').innerHTML = '';
+    sectionCountEl.textContent = '';
+    totalResourcesEl.textContent = '0';
+    return;
+  }
+  sectionTitleEl.textContent = sec.name;
+  sectionCountEl.textContent = `الموارد: ${sec.resources.length}`;
+  totalResourcesEl.textContent = sec.resources.length;
+  // resources grid
+  resourcesGrid.innerHTML = '';
+  sec.resources.forEach((r, idx)=>{
+    const node = document.createElement('div');
+    node.className = 'resource';
+    node.draggable = true;
+    node.dataset.rid = r.id;
+    node.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="drag-handle">سحب</div>
+      </div>
+      <img class="thumb" src="${escapeHtml(r.thumbnail||'')}" onerror="this.src='https://via.placeholder.com/320x180.png?text=No+Thumb'"/>
+      <div class="r-info">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="flex:1">
+            <div class="r-title" data-editable>${escapeHtml(r.title)}</div>
+            <div class="r-meta">${escapeHtml(r.url)}</div>
+          </div>
+          <div style="text-align:left">
+            <div class="small muted">مستوى</div>
+            <div style="margin-top:6px">${escapeHtml(r.level||'—')}</div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="${r.suitable===false ? 'warning' : 'success'}">${r.suitable===false ? 'غير مناسب' : 'مناسب'}</div>
+          <div class="small muted" style="margin-right:8px">تشابه: ${(r.similarity||0).toFixed(2)}</div>
+          <button class="btn ghost" data-action="remove" data-id="${r.id}">حذف</button>
+          ${r.suitable===false ? `<button class="btn" data-action="save-ignore" data-id="${r.id}" style="background:#f97316">حفظ مع التحذير</button>` : ''}
+        </div>
+      </div>
+    `;
+    // editable title click
+    node.querySelector('[data-editable]').addEventListener('click', (e)=>{
+      const cur = e.target.textContent;
+      const input = document.createElement('input');
+      input.value = cur;
+      input.style.width = '100%';
+      input.addEventListener('blur', ()=>{
+        const newVal = input.value.trim() || cur;
+        e.target.textContent = newVal;
+        // update model
+        r.title = newVal;
+        saveData(state);
+        renderActiveSection();
+      });
+      e.target.replaceWith(input);
+      input.focus();
+    });
+
+    // remove handler
+    node.querySelector('[data-action="remove"]')?.addEventListener('click', ()=>{
+      if(confirm('هل تريد حذف هذا المورد؟')) {
+        sec.resources = sec.resources.filter(x=>x.id!==r.id);
+        saveData(state);
+        renderSections();
+        renderActiveSection();
+      }
+    });
+    // save-with-warning handler
+    node.querySelector('[data-action="save-ignore"]')?.addEventListener('click', ()=>{
+      r.suitable = true;
+      saveData(state);
+      renderActiveSection();
+    });
+
+    // drag events
+    node.addEventListener('dragstart', (ev)=> {
+      ev.dataTransfer.setData('text/plain', r.id);
+      node.style.opacity = '0.4';
+    });
+    node.addEventListener('dragend', (ev)=> {
+      node.style.opacity = '';
+    });
+
+    resourcesGrid.appendChild(node);
+  });
+
+  // allow drop reordering
+  resourcesGrid.querySelectorAll('.resource').forEach(el=>{
+    el.addEventListener('dragover', ev=>{ ev.preventDefault(); el.style.border='2px dashed rgba(37,99,235,0.2)'; });
+    el.addEventListener('dragleave', ev=>{ el.style.border=''; });
+    el.addEventListener('drop', ev=>{
+      ev.preventDefault();
+      el.style.border='';
+      const rid = ev.dataTransfer.getData('text/plain');
+      if(!rid) return;
+      const fromIdx = sec.resources.findIndex(x=>x.id===rid);
+      const toIdx = sec.resources.findIndex(x=>x.id===el.dataset.rid);
+      if(fromIdx<0||toIdx<0) return;
+      const [item] = sec.resources.splice(fromIdx,1);
+      sec.resources.splice(toIdx,0,item);
+      saveData(state);
+      renderActiveSection();
+    });
+  });
+}
+
+/* Event listeners */
+addSectionBtn.addEventListener('click', ()=>{
+  const name = newSectionInput.value.trim();
+  if(!name){ alert('اكتب اسم الجزء أولاً'); return; }
+  const sid = uid('sec');
+  state.sections.push({ id:sid, name, resources:[] });
+  saveData(state);
+  newSectionInput.value='';
+  activeSectionId = sid;
+  renderSections();
+  renderActiveSection();
+});
+
+sectionListEl.addEventListener('click', (e)=>{
+  if(e.target.matches('[data-del]')){
+    const id = e.target.getAttribute('data-del');
+    if(confirm('هل تريد حذف الجزء ومحتوياته؟')) {
+      state.sections = state.sections.filter(s=>s.id!==id);
+      if(activeSectionId===id) activeSectionId = state.sections[0]?.id || null;
+      saveData(state);
+      renderSections();
+      renderActiveSection();
+    }
+  } else if(e.target.matches('.open-sec')){
+    const id = e.target.getAttribute('data-id');
+    activeSectionId = id;
+    renderSections();
+    renderActiveSection();
+  }
+});
+
+addResourceBtn.addEventListener('click', async ()=>{
+  const url = resourceUrlInput.value.trim();
+  const secId = chooseSectionSelect.value;
+  const level = selectLevel.value;
+  if(!url){ alert('حط رابط أولاً'); return; }
+  if(!secId){ alert('اختار جزء أو أنشئ واحد'); return; }
+
+  // meta extraction
+  let thumbnail = extractYouTubeThumbnail(url);
+  let title = guessTitleFromUrl(url);
+  let description = ''; // we don't fetch remote descriptions in this prototype
+
+  // create resource
+  const rid = uid('r');
+  const section = state.sections.find(s=>s.id===secId);
+  const sim = similarityScore(section.name, title, description); // 0..1
+  const suitable = sim >= 0.4; // threshold (tunable)
+
+  const resource = {
+    id: rid,
+    url,
+    title,
+    thumbnail: thumbnail || 'https://via.placeholder.com/320x180.png?text=No+Thumb',
+    level: level || null,
+    similarity: sim,
+    suitable
+  };
+
+  // if not suitable -> show warning modal inline (we'll append to resources grid after saving)
+  section.resources.push(resource);
+  saveData(state);
+  resourceUrlInput.value='';
+
+  renderSections();
+  activeSectionId = secId;
+  renderActiveSection();
+
+  if(!suitable){
+    // brief notification
+    alert(`⚠️ تنبيه: المورد قد لا يكون مناسبًا للجزء "${section.name}" (تشابه ${(sim).toFixed(2)})\nيمكنك تجاهل التحذير داخل البطاقة وحفظ المورد.`);
+  }
+});
+
+/* AI ordering - simulated */
+btnAIOrder.addEventListener('click', ()=>{
+  // for each section, sort resources by (suitable desc, similarity desc, level)
+  state.sections.forEach(s=>{
+    s.resources.sort((a,b)=>{
+      if((b.suitable?1:0)!=(a.suitable?1:0)) return (b.suitable?1:0)-(a.suitable?1:0);
+      if((b.similarity||0)!=(a.similarity||0)) return (b.similarity||0)-(a.similarity||0);
+      const levels = { 'مبتدئ':1, 'متوسط':2, 'متقدم':3 };
+      return (levels[b.level]||0)-(levels[a.level]||0);
+    });
+  });
+  saveData(state);
+  renderActiveSection();
+  alert('تم الترتيب تلقائياً (محاكاة AI)');
+});
+
+/* search */
+searchInput.addEventListener('input', (e)=>{
+  const q = e.target.value.trim().toLowerCase();
+  if(!q) return renderActiveSection();
+  // search across active section resources; if no active, search all and show first matching section
+  const sec = state.sections.find(s=>s.id===activeSectionId);
+  if(sec){
+    // filter displayed grid
+    const filtered = sec.resources.filter(r=> (r.title + ' ' + r.url).toLowerCase().includes(q) );
+    // temporarily render filtered
+    resourcesGrid.innerHTML = '';
+    filtered.forEach(r=>{
+      const node = document.createElement('div');
+      node.className = 'resource';
+      node.innerHTML = `<img class="thumb" src="${escapeHtml(r.thumbnail)}"/><div class="r-info"><div class="r-title">${escapeHtml(r.title)}</div><div class="r-meta">${escapeHtml(r.url)}</div></div>`;
+      resourcesGrid.appendChild(node);
+    });
+  } else {
+    // find first match
+    for(const s of state.sections){
+      const found = s.resources.find(r=> (r.title + ' ' + r.url).toLowerCase().includes(q));
+      if(found){
+        activeSectionId = s.id; renderSections(); renderActiveSection(); break;
+      }
+    }
+  }
+});
+
+/* export/import */
+btnExport.addEventListener('click', ()=>{
+  const dataStr = JSON.stringify(state, null, 2);
+  // download as file
+  const blob = new Blob([dataStr], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'learnsync_export.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+btnShare.addEventListener('click', ()=>{
+  jsonArea.value = JSON.stringify(state, null, 2);
+  jsonModal.style.display = 'flex';
+  jsonModal.scrollIntoView({behavior:'smooth'});
+});
+
+btnImport.addEventListener('click', ()=>{
+  jsonArea.value = '';
+  jsonModal.style.display = 'flex';
+});
+
+doCloseJson.addEventListener('click', ()=>{ jsonModal.style.display='none'; });
+
+doImport.addEventListener('click', ()=>{
+  try{
+    const parsed = JSON.parse(jsonArea.value);
+    if(!parsed || !Array.isArray(parsed.sections) && !parsed.sections) {
+      // allow both forms: {sections: [...] } or [...]
+    }
+    // normalize
+    if(Array.isArray(parsed)){
+      state = { sections: parsed };
+    } else if(parsed.sections){
+      state = parsed;
+    } else {
+      alert('JSON غير صحيح');
+      return;
+    }
+    saveData(state);
+    activeSectionId = state.sections[0]?.id || null;
+    renderSections();
+    renderActiveSection();
+    jsonModal.style.display='none';
+    alert('تم الاستيراد');
+  }catch(e){
+    alert('خطأ في JSON: ' + e.message);
+  }
+});
+
+/* helper: seed sample data if empty */
+function seedIfEmpty(){
+  if(state.sections.length===0){
+    const sid = uid('sec');
+    state.sections.push({
+      id:sid,
+      name:'تنظيف البيانات',
+      resources:[
+        { id: uid('r'), url:'https://www.youtube.com/watch?v=abcd1234', title:'مقدمة في Pandas', thumbnail:'https://img.youtube.com/vi/abcd1234/hqdefault.jpg', level:'مبتدئ', similarity:0.9, suitable:true },
+        { id: uid('r'), url:'https://www.youtube.com/watch?v=zzzz7777', title:'مفاهيم في الشبكات العصبية', thumbnail:'https://img.youtube.com/vi/zzzz7777/hqdefault.jpg', level:'متوسط', similarity:0.05, suitable:false }
+      ]
+    });
+    state.sections.push({ id: uid('sec'), name:'Python Basics', resources:[] });
+    saveData(state);
+  }
+}
+
+/* init */
+seedIfEmpty();
+renderSections();
+activeSectionId = activeSectionId || state.sections[0]?.id;
+renderActiveSection();
+
+/* expose for debugging */
+window.learnsync = { state, saveData };
+</script>
+</body>
+</html>

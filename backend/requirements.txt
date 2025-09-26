@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+openai
+youtube-transcript-api
+requests
+python-multipart
+sqlalchemy
+pydantic
+scikit-learn
+numpy
+python-dotenv
